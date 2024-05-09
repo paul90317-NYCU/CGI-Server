@@ -54,14 +54,21 @@ temp_root=$(mktemp -d)
 initialize() {
 	cd $temp_root
 
-	# create and mount the system directories to 'temp_root' besides /home
-	ls / | grep -v -E 'home' | while read dir; do
-		mkdir -p "$temp_root/$dir"
-		mount --rbind "/$dir" "$temp_root/$dir" 2>/dev/null
-        # remove the directory when the mount fails
+	mount_dir() {
+		mkdir -p "$temp_root/$1"
+		mount --rbind "$1" "$temp_root/$1" 2>/dev/null
+		# remove the directory when the mount fails
 		if [ $? -ne 0 ]; then
-			rm -rf "$temp_root/$dir"
+			rm -rf "$temp_root/$1"
 		fi
+	}
+
+	# create and mount the system directories to 'temp_root' besides /home
+	ls / | while read dir; do
+		if [[ "$dir" == "home" || "$dir" == "u" || "$dir" == "net" ]]; then
+			continue
+		fi
+		mount_dir "/$dir"
 	done
 
 	IFS=',' read -ra volumes_array <<< "$volumns"
