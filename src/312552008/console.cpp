@@ -9,11 +9,95 @@
 
 using boost::asio::ip::tcp;
 
+void output_connection(std::string is, std::string hi, std::string pi)
+{
+    std::cout << "<script>document.getElementById('connection').innerHTML += "
+                 "'<th scope=\"col\">" +
+                     hi + ":" + pi + "</th>';</script>";
+    std::cout << "<script>document.getElementById('output').innerHTML += "
+                 "'<td><pre id=\"s" +
+                     is + "\" class=\"mb-0\"></pre></td>';</script>";
+}
+
+void replace_newline(std::string &line)
+{
+    size_t pos = 0;
+    while ((pos = line.find('\n', pos)) != std::string::npos) {
+        line.replace(pos, 1, "<br/>");
+        pos += 5;  // Move past the inserted "<br/>"
+    }
+}
+
+void output_shell(std::string is, std::string shell)
+{
+    replace_newline(shell);
+    std::cout << "<script>document.getElementById('s" + is +
+                     "').innerHTML += '" + shell + "';</script>";
+}
+
+void output_command(std::string is, std::string command)
+{
+    std::cout << "<script>document.getElementById('s" + is +
+                     "').innerHTML += '<b>" + command + "</b><br/>';</script>";
+}
+
+const char *body = R"MAIN(
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>NP Project 3 Sample Console</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css"
+      integrity="sha384-TX8t27EcRE3e/ihU7zmQxVncDAy5uIKz4rEkgIXeMed4M0jlfIDPvg6uqKI2xXr2"
+      crossorigin="anonymous"
+    />
+    <link
+      href="https://fonts.googleapis.com/css?family=Source+Code+Pro"
+      rel="stylesheet"
+    />
+    <link
+      rel="icon"
+      type="image/png"
+      href="https://cdn0.iconfinder.com/data/icons/small-n-flat/24/678068-terminal-512.png"
+    />
+    <style>
+      * {
+        font-family: 'Source Code Pro', monospace;
+        font-size: 1rem !important;
+      }
+      body {
+        background-color: #212529;
+      }
+      pre {
+        color: #cccccc;
+      }
+      b {
+        color: #01b468;
+      }
+    </style>
+  </head>
+  <body>
+    <table class="table table-dark table-bordered">
+      <thead>
+        <tr id="connection">
+        </tr>
+      </thead>
+      <tbody>
+        <tr id="output">
+        </tr>
+      </tbody>
+    </table>
+  </body>
+</html>
+)MAIN";
+
 class session : public std::enable_shared_from_this<session>
 {
 public:
-    session(tcp::socket socket, std::fstream file)
-        : socket_(std::move(socket)), file_(std::move(file))
+    session(tcp::socket socket, std::fstream file, std::string is)
+        : socket_(std::move(socket)), file_(std::move(file)), is_(is)
     {
     }
 
@@ -25,6 +109,7 @@ private:
         if (!std::getline(file_, line_))
             return;
         auto self(shared_from_this());
+        output_command(is_, line_);
         boost::asio::async_write(
             socket_, boost::asio::buffer(line_ + "\n"),
             [this, self](boost::system::error_code ec, std::size_t /*length*/) {
@@ -41,7 +126,7 @@ private:
             [this, self](const boost::system::error_code &error,
                          size_t bytes_transferred) {
                 if (!error) {
-                    std::cout << response_;
+                    output_shell(is_, response_);
                     write_command();  // Continue reading until EOF
                 } else if (error != boost::asio::error::eof) {
                     std::cerr << "Read error: " << error.message() << std::endl;
@@ -51,6 +136,7 @@ private:
 
     tcp::socket socket_;
     std::fstream file_;
+    std::string is_;
     std::string line_;
     std::string response_;
 };
@@ -58,7 +144,8 @@ private:
 void execute(boost::asio::io_context &io_context,
              std::string host,
              std::string port,
-             std::string filename)
+             std::string filename,
+             std::string is)
 {
     // Open file for reading
     std::fstream file(filename, std::ios_base::openmode::_S_in);
@@ -76,25 +163,14 @@ void execute(boost::asio::io_context &io_context,
 
     // Connect to server
     boost::asio::connect(socket, endpoints);
-    std::make_shared<session>(std::move(socket), std::move(file))->start();
+    std::make_shared<session>(std::move(socket), std::move(file), is)->start();
 }
 
 int main()
 {
     // Print HTTP headers
-    std::cout << "Content-Type: text/plain\r\n\r\n";
-
-    // Print specific environment variables
-    std::cout << "REQUEST_METHOD=" << getenv("REQUEST_METHOD") << "\r\n";
-    std::cout << "REQUEST_URI=" << getenv("REQUEST_URI") << "\r\n";
-    std::cout << "QUERY_STRING=" << getenv("QUERY_STRING") << "\r\n";
-    std::cout << "SERVER_PROTOCOL=" << getenv("SERVER_PROTOCOL") << "\r\n";
-    std::cout << "HTTP_HOST=" << getenv("HTTP_HOST") << "\r\n";
-    std::cout << "SERVER_ADDR=140.113.235.235"
-              << "\r\n";  // Assuming this is your server's IP address
-    std::cout << "SERVER_PORT=" << getenv("SERVER_PORT") << "\r\n";
-    std::cout << "REMOTE_ADDR=" << getenv("REMOTE_ADDR") << "\r\n";
-    std::cout << "REMOTE_PORT=" << getenv("REMOTE_PORT") << "\r\n";
+    std::cout << "Content-Type: text/html\r\n\r\n";
+    std::cout << body;
 
     // parse query
     char *v, *qstr = strdup(getenv("QUERY_STRING")), *qstart = qstr;
@@ -111,7 +187,8 @@ int main()
         std::string hi = querys["h" + is], pi = querys["p" + is],
                     fi = querys["f" + is];
         if (hi.size() && pi.size() && fi.size()) {
-            execute(io_context, hi, pi, fi);
+            execute(io_context, hi, pi, fi, is);
+            output_connection(is, hi, pi);
         }
     }
 

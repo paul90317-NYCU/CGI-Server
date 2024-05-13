@@ -8,11 +8,6 @@
 
 using boost::asio::ip::tcp;
 
-auto buffer(char *data_)
-{
-    return boost::asio::buffer(data_, strlen(data_));
-}
-
 class session : public std::enable_shared_from_this<session>
 {
 public:
