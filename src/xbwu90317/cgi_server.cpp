@@ -16,6 +16,7 @@ boost::asio::io_context io_context;
 class session : public std::enable_shared_from_this<session>
 {
 public:
+    tcp::socket socket_;
     session(tcp::socket socket, std::string server_addr)
         : socket_(std::move(socket)), SERVER_ADDR(server_addr)
     {
@@ -81,10 +82,10 @@ private:
             [this, self](boost::system::error_code ec, std::size_t /*length*/) {
                 if (ec)
                     return;
-                console_run(socket_, QUERY_STRING);
+                console_run(std::move(socket_), QUERY_STRING);
             });
     }
-    tcp::socket socket_;
+    
     std::string SERVER_PORT;
     std::string request;
     std::string REQUEST_METHOD, REQUEST_URI, QUERY_STRING, SERVER_PROTOCOL,

@@ -35,27 +35,6 @@ void replace_all(std::string &line)
     boost::replace_all(line, "\n", "&NewLine;");
 }
 
-void output_shell(tcp::socket &socket_, std::string is, std::string shell)
-{
-    replace_all(shell);
-    boost::asio::streambuf buf;
-    std::ostream bout(&buf);
-    bout << "<script>document.getElementById('s" + is +
-                     "').innerHTML += '" + shell + "';</script>";
-    boost::asio::write(socket_, buf);
-}
-
-void output_command(tcp::socket &socket_, std::string is, std::string command)
-{
-    replace_all(command);
-    boost::asio::streambuf buf;
-    std::ostream bout(&buf);
-    bout << "<script>document.getElementById('s" + is +
-                     "').innerHTML += '<b>" + command +
-                     "</b>&NewLine;';</script>";
-    boost::asio::write(socket_, buf);
-}
-
 const char *body = R"MAIN(
 <!DOCTYPE html>
 <html lang="en">
@@ -111,22 +90,43 @@ const char *body = R"MAIN(
 class golden_session : public std::enable_shared_from_this<golden_session>
 {
 public:
-    golden_session(tcp::socket socket, std::fstream file, std::string is)
-        : socket_(std::move(socket)), file_(std::move(file)), is_(is)
+    golden_session(tcp::socket http, tcp::socket golden, std::fstream file, std::string is)
+        : http_(std::move(http)), golden_(std::move(golden)), file_(std::move(file)), is_(is)
     {
     }
 
     void start() { read_response(); }
 
 private:
+    void output_shell(std::string is, std::string shell)
+    {
+        replace_all(shell);
+        boost::asio::streambuf buf;
+        std::ostream bout(&buf);
+        bout << "<script>document.getElementById('s" + is +
+                        "').innerHTML += '" + shell + "';</script>";
+        boost::asio::write(http_, buf);
+    }
+
+    void output_command(std::string is, std::string command)
+    {
+        replace_all(command);
+        boost::asio::streambuf buf;
+        std::ostream bout(&buf);
+        bout << "<script>document.getElementById('s" + is +
+                        "').innerHTML += '<b>" + command +
+                        "</b>&NewLine;';</script>";
+        boost::asio::write(http_, buf);
+    }
+
     void write_command()
     {
         if (!std::getline(file_, line_))
             return;
         auto self(shared_from_this());
-        output_command(socket_, is_, line_);
+        output_command(is_, line_);
         boost::asio::async_write(
-            socket_, boost::asio::buffer(line_ + "\n"),
+            golden_, boost::asio::buffer(line_ + "\n"),
             [this, self](boost::system::error_code ec, std::size_t /*length*/) {
                 if (!ec)
                     read_response();
@@ -137,11 +137,11 @@ private:
         auto self(shared_from_this());
         response_ = "";
         boost::asio::async_read_until(
-            socket_, boost::asio::dynamic_buffer(response_), '%',
+            golden_, boost::asio::dynamic_buffer(response_), '%',
             [this, self](const boost::system::error_code &error,
                          size_t bytes_transferred) {
                 if (!error) {
-                    output_shell(socket_, is_, response_);
+                    output_shell(is_, response_);
                     write_command();  // Continue reading until EOF
                 } else if (error != boost::asio::error::eof) {
                     std::cerr << "Read error: " << error.message() << std::endl;
@@ -149,14 +149,15 @@ private:
             });
     }
 
-    tcp::socket socket_;
+    tcp::socket http_, golden_;
     std::fstream file_;
     std::string is_;
     std::string line_;
     std::string response_;
 };
 
-void execute(std::string host,
+void execute(tcp::socket http,
+             std::string host,
              std::string port,
              std::string filename,
              std::string is)
@@ -170,26 +171,25 @@ void execute(std::string host,
     }
 
     // Create socket
-    tcp::socket socket(io_context);
+    tcp::socket golden(io_context);
 
     // Resolve endpoint
     tcp::resolver resolver(io_context);
     auto endpoints = resolver.resolve(host, port);
 
     // Connect to server
-    boost::asio::connect(socket, endpoints);
-    std::make_shared<golden_session>(std::move(socket), std::move(file), is)->start();
+    boost::asio::connect(golden, endpoints);
+    std::make_shared<golden_session>(std::move(http), std::move(golden), std::move(file), is)->start();
 }
 
-void console_run(tcp::socket &socket_, std::string QUERY_STRING)
+void console_run(tcp::socket http, std::string QUERY_STRING)
 {
     // Print HTTP headers
     boost::asio::streambuf buf;
     std::ostream bout(&buf);
     bout << "Content-Type: text/html\r\n\r\n";
     bout << body;
-    boost::asio::write(socket_, buf);
-    
+    boost::asio::write(http, buf);
 
     // parse query
     char *v, *qstr = &QUERY_STRING[0];
@@ -204,8 +204,8 @@ void console_run(tcp::socket &socket_, std::string QUERY_STRING)
         std::string hi = querys["h" + is], pi = querys["p" + is],
                     fi = querys["f" + is];
         if (hi.size() && pi.size() && fi.size()) {
-            execute(hi, pi, fi, is);
-            output_connection(socket_, is, hi, pi);
+            output_connection(http, is, hi, pi);
+            execute(std::move(http), hi, pi, fi, is);
         }
     }
 }
