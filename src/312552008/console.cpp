@@ -148,7 +148,8 @@ void execute(boost::asio::io_context &io_context,
              std::string is)
 {
     // Open file for reading
-    std::fstream file(filename, std::ios_base::openmode::_S_in);
+    std::fstream file("./test_case/" + filename,
+                      std::ios_base::openmode::_S_in);
     if (!file.is_open()) {
         std::cerr << "Error opening file" << std::endl;
         exit(EXIT_FAILURE);

@@ -4,6 +4,7 @@
 #include <iostream>
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <utility>
 
 using boost::asio::ip::tcp;
@@ -49,7 +50,7 @@ private:
 
         // Parse HTTP headers
         std::string line;
-        std::map<std::string, std::string> headers;
+        std::unordered_map<std::string, std::string> headers;
         while (std::getline(ss, line) && !line.empty()) {
             std::istringstream iss(line);
             std::string header_name, header_value;
