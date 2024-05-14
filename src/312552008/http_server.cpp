@@ -89,13 +89,22 @@ private:
                     exit(EXIT_FAILURE);
                 case 0:
 
+                    if (REQUEST_URI.find_last_of("/")) {
+                        std::cerr << "URI [" << REQUEST_URI
+                                  << "] is not allowed\n";
+                        exit(EXIT_FAILURE);
+                    }
+
                     dup2(socket_.native_handle(), STDOUT_FILENO);
                     dup2(socket_.native_handle(), STDIN_FILENO);
                     close(socket_.native_handle());
 
                     // Execute CGI script
-                    execlp("./console.cgi", "./console.cgi", NULL);
-                    perror("execlp");
+                    std::string cgi("." + REQUEST_URI);
+
+                    execlp(cgi.c_str(), cgi.c_str(), NULL);
+                    std::string errs("execlp(" + cgi + ")");
+                    perror(errs.c_str());
                     exit(EXIT_FAILURE);
                 }
             });
