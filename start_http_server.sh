@@ -75,8 +75,7 @@ if cd "$DEMO_DIR"; then
   echo ""
   INFO "Test http_server and console.cgi (combined)"
   echo "      http://$(hostname).cs.nycu.edu.tw:$HTTP_SERVER_PORT/panel.cgi"
-  cd working_dir || exit 1
-  env -i ./http_server "$HTTP_SERVER_PORT"
+  ./start-container.sh -c "cd working_dir || exit 1; env -i ./http_server $HTTP_SERVER_PORT"
 
 else
   ERROR "Cannot change to the demo directory!"

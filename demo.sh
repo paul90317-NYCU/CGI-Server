@@ -6,9 +6,10 @@ NP_SINGLE_DIR="$DEMO_DIR/np_single"
 STUDENT_ID="$1"
 
 chmod 700 "$DEMO_DIR"
+cp start-container.sh "$DEMO_DIR"
 cp -r np_single/ "$DEMO_DIR"
 cp start_np_single.sh "$NP_SINGLE_DIR"
-cp port.py start-container.sh "$NP_SINGLE_DIR"
+cp port.py "$NP_SINGLE_DIR"
 
 # If the demo working directory already exists (probably because you have executed it before), remove it.
 if [ -f ~/.$PROJECT_NAME ]; then
@@ -30,5 +31,5 @@ tmux split-window -v -p 60
 tmux select-pane -t 0
 tmux send "cd $(dirname "$(readlink -f "$0")"); ./start-container.sh -c \"./start_np_singles.py $NP_SINGLE_DIR\"" ENTER
 tmux select-pane -t 1
-tmux send "cd $(dirname "$(readlink -f "$0")"); ./start-container.sh -c \"./start_http_server.sh $DEMO_DIR $STUDENT_ID $(whoami)\"" ENTER
+tmux send "cd $(dirname "$(readlink -f "$0")"); ./start_http_server.sh $DEMO_DIR $STUDENT_ID $(whoami)" ENTER
 tmux attach-session -t "npdemo3"
