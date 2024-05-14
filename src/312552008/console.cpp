@@ -17,6 +17,7 @@ void output_connection(std::string is, std::string hi, std::string pi)
     std::cout << "<script>document.getElementById('output').innerHTML += "
                  "'<td><pre id=\"s" +
                      is + "\" class=\"mb-0\"></pre></td>';</script>";
+    std::cout.flush();
 }
 
 void replace_newline(std::string &line)
@@ -33,12 +34,14 @@ void output_shell(std::string is, std::string shell)
     replace_newline(shell);
     std::cout << "<script>document.getElementById('s" + is +
                      "').innerHTML += '" + shell + "';</script>";
+    std::cout.flush();
 }
 
 void output_command(std::string is, std::string command)
 {
     std::cout << "<script>document.getElementById('s" + is +
                      "').innerHTML += '<b>" + command + "</b><br/>';</script>";
+    std::cout.flush();
 }
 
 const char *body = R"MAIN(
@@ -172,6 +175,7 @@ int main()
     // Print HTTP headers
     std::cout << "Content-Type: text/html\r\n\r\n";
     std::cout << body;
+    std::cout.flush();
 
     // parse query
     char *v, *qstr = strdup(getenv("QUERY_STRING")), *qstart = qstr;
