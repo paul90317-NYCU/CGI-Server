@@ -20,18 +20,20 @@ void output_connection(std::string is, std::string hi, std::string pi)
     std::cout.flush();
 }
 
-void replace_newline(std::string &line)
+void replace_all(std::string &line)
 {
-    size_t pos = 0;
-    while ((pos = line.find('\n', pos)) != std::string::npos) {
-        line.replace(pos, 1, "<br/>");
-        pos += 5;  // Move past the inserted "<br/>"
-    }
+    boost::replace_all(line, "&", "&amp;");
+    boost::replace_all(line, "\"", "&quot;");
+    boost::replace_all(line, "\'", "&apos;");
+    boost::replace_all(line, "<", "&lt;");
+    boost::replace_all(line, ">", "&gt;");
+    boost::replace_all(line, "\r", "");
+    boost::replace_all(line, "\n", "&NewLine;");
 }
 
 void output_shell(std::string is, std::string shell)
 {
-    replace_newline(shell);
+    replace_all(shell);
     std::cout << "<script>document.getElementById('s" + is +
                      "').innerHTML += '" + shell + "';</script>";
     std::cout.flush();
@@ -39,8 +41,10 @@ void output_shell(std::string is, std::string shell)
 
 void output_command(std::string is, std::string command)
 {
+    replace_all(command);
     std::cout << "<script>document.getElementById('s" + is +
-                     "').innerHTML += '<b>" + command + "</b><br/>';</script>";
+                     "').innerHTML += '<b>" + command +
+                     "</b>&NewLine;';</script>";
     std::cout.flush();
 }
 
