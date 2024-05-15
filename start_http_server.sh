@@ -45,7 +45,7 @@ mkdir -p "$HOME/public_html/npdemo3" && cp -r "$NP_SCRIPT_DIR/working_dir/"* "$H
 # Compile, and let the student's programs do it's work.
 if cd "$DEMO_DIR"; then
   INFO "Compiling..."
-  if (make -C "$DEMO_DIR/src"); then
+  if (make part1 -C "$DEMO_DIR/src"); then
     SUCCESS "Compilation completed!"
   else
     ERROR "Your project cannot be compiled by make"
