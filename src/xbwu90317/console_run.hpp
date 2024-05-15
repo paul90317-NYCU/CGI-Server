@@ -90,8 +90,8 @@ const char *body = R"MAIN(
 class golden_session : public std::enable_shared_from_this<golden_session>
 {
 public:
-    golden_session(tcp::socket http, tcp::socket golden, std::fstream file, std::string is)
-        : http_(std::move(http)), golden_(std::move(golden)), file_(std::move(file)), is_(is)
+    golden_session(std::shared_ptr<tcp::socket> http, tcp::socket golden, std::fstream file, std::string is)
+        : http_(http), golden_(std::move(golden)), file_(std::move(file)), is_(is)
     {
     }
 
@@ -105,7 +105,7 @@ private:
         std::ostream bout(&buf);
         bout << "<script>document.getElementById('s" + is +
                         "').innerHTML += '" + shell + "';</script>";
-        boost::asio::write(http_, buf);
+        boost::asio::write(*http_.get(), buf);
     }
 
     void output_command(std::string is, std::string command)
@@ -116,7 +116,7 @@ private:
         bout << "<script>document.getElementById('s" + is +
                         "').innerHTML += '<b>" + command +
                         "</b>&NewLine;';</script>";
-        boost::asio::write(http_, buf);
+        boost::asio::write(*http_.get(), buf);
     }
 
     void write_command()
@@ -148,15 +148,15 @@ private:
                 }
             });
     }
-
-    tcp::socket http_, golden_;
+    std::shared_ptr<tcp::socket> http_;
+    tcp::socket golden_;
     std::fstream file_;
     std::string is_;
     std::string line_;
     std::string response_;
 };
 
-void execute(tcp::socket http,
+void execute(std::shared_ptr<tcp::socket> http,
              std::string host,
              std::string port,
              std::string filename,
@@ -182,14 +182,14 @@ void execute(tcp::socket http,
     std::make_shared<golden_session>(std::move(http), std::move(golden), std::move(file), is)->start();
 }
 
-void console_run(tcp::socket http, std::string QUERY_STRING)
+void console_run(std::shared_ptr<tcp::socket> http, std::string QUERY_STRING)
 {
     // Print HTTP headers
     boost::asio::streambuf buf;
     std::ostream bout(&buf);
     bout << "Content-Type: text/html\r\n\r\n";
     bout << body;
-    boost::asio::write(http, buf);
+    boost::asio::write(*http.get(), buf);
 
     // parse query
     char *v, *qstr = &QUERY_STRING[0];
@@ -204,8 +204,8 @@ void console_run(tcp::socket http, std::string QUERY_STRING)
         std::string hi = querys["h" + is], pi = querys["p" + is],
                     fi = querys["f" + is];
         if (hi.size() && pi.size() && fi.size()) {
-            output_connection(http, is, hi, pi);
-            execute(std::move(http), hi, pi, fi, is);
+            output_connection(*http.get(), is, hi, pi);
+            execute(http, hi, pi, fi, is);
         }
     }
 }

@@ -16,9 +16,8 @@ boost::asio::io_context io_context;
 class session : public std::enable_shared_from_this<session>
 {
 public:
-    tcp::socket socket_;
-    session(tcp::socket socket, std::string server_addr)
-        : socket_(std::move(socket)), SERVER_ADDR(server_addr)
+    session(std::shared_ptr<tcp::socket> socket, std::string server_addr)
+        : socket_(socket), SERVER_ADDR(server_addr)
     {
     }
 
@@ -31,7 +30,7 @@ private:
         // Read data until newline (HTTP request headers usually end with a
         // blank line)
         boost::asio::async_read_until(
-            socket_, boost::asio::dynamic_buffer(request), "\r\n\r\n",
+            *socket_.get(), boost::asio::dynamic_buffer(request), "\r\n\r\n",
             [this, self](boost::system::error_code ec, std::size_t length) {
                 if (!ec)
                     handle_request();
@@ -72,20 +71,21 @@ private:
         SERVER_PROTOCOL = server_protocol;
         HTTP_HOST = headers["Host"];
         // SERVER_ADDR = "0.0.0.0";
-        SERVER_PORT = std::to_string(socket_.local_endpoint().port());
-        REMOTE_ADDR = socket_.remote_endpoint().address().to_string();
-        REMOTE_PORT = std::to_string(socket_.remote_endpoint().port());
+        SERVER_PORT = std::to_string(socket_.get()->local_endpoint().port());
+        REMOTE_ADDR = socket_.get()->remote_endpoint().address().to_string();
+        REMOTE_PORT = std::to_string(socket_.get()->remote_endpoint().port());
 
         // Write HTTP response header
         boost::asio::async_write(
-            socket_, boost::asio::buffer(std::string("HTTP/1.1 200 OK\r\n")),
+            *socket_.get(), boost::asio::buffer(std::string("HTTP/1.1 200 OK\r\n")),
             [this, self](boost::system::error_code ec, std::size_t /*length*/) {
                 if (ec)
                     return;
-                console_run(std::move(socket_), QUERY_STRING);
+                console_run(socket_, QUERY_STRING);
             });
     }
     
+    std::shared_ptr<tcp::socket> socket_;
     std::string SERVER_PORT;
     std::string request;
     std::string REQUEST_METHOD, REQUEST_URI, QUERY_STRING, SERVER_PROTOCOL,
@@ -167,15 +167,14 @@ public:
 private:
     void do_accept()
     {
-        acceptor_.async_accept(
-            [this](boost::system::error_code ec, tcp::socket socket) {
-                if (!ec) {
-                    std::make_shared<session>(std::move(socket), SERVER_ADDR)
-                        ->start();
-                }
-
-                do_accept();
-            });
+        auto socket = std::make_shared<tcp::socket>(io_context);
+        acceptor_.async_accept(*socket.get(), [this, socket](const boost::system::error_code& error) {
+            if (!error) {
+                std::make_shared<session>(socket, SERVER_ADDR)->start();
+            }
+            // 在這裡，socket 是智慧指標，不需要再呼叫 socket.reset()
+            do_accept();
+        });
     }
 
     tcp::acceptor acceptor_;
