@@ -31,5 +31,5 @@ tmux split-window -v -p 60
 tmux select-pane -t 0
 tmux send "cd $(dirname "$(readlink -f "$0")"); ./start-container.sh -c \"./start_np_singles.py $NP_SINGLE_DIR\"" ENTER
 tmux select-pane -t 1
-tmux send "cd $(dirname "$(readlink -f "$0")"); ./start_http_server.sh $DEMO_DIR $STUDENT_ID $(whoami)" ENTER
+tmux send "cd $(dirname "$(readlink -f "$0")"); ./start_http_server.sh $DEMO_DIR $STUDENT_ID" ENTER
 tmux attach-session -t "npdemo3"
