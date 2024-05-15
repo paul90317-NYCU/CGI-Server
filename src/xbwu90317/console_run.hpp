@@ -184,28 +184,32 @@ void execute(std::shared_ptr<tcp::socket> http,
 
 void console_run(std::shared_ptr<tcp::socket> http, std::string QUERY_STRING)
 {
-    // Print HTTP headers
-    boost::asio::streambuf buf;
-    std::ostream bout(&buf);
-    bout << "Content-type: text/html\r\n\r\n";
-    bout << console_body;
-    boost::asio::write(*http.get(), buf);
+    try {
+        // Print HTTP headers
+        boost::asio::streambuf buf;
+        std::ostream bout(&buf);
+        bout << "Content-type: text/html\r\n\r\n";
+        bout << console_body;
+        boost::asio::write(*http.get(), buf);
 
-    // parse query
-    char *v, *qstr = &QUERY_STRING[0];
-    std::unordered_map<std::string, std::string> querys;
-    while ((v = strtok_r(qstr, "&", &qstr)) != 0) {
-        char *k = strtok_r(v, "=", &v);
-        querys[k] = v;
-    }
-
-    for (int i = 0; i < 5; ++i) {
-        std::string is = std::to_string(i);
-        std::string hi = querys["h" + is], pi = querys["p" + is],
-                    fi = querys["f" + is];
-        if (hi.size() && pi.size() && fi.size()) {
-            output_connection(*http.get(), is, hi, pi);
-            execute(http, hi, pi, fi, is);
+        // parse query
+        char *v, *qstr = &QUERY_STRING[0];
+        std::unordered_map<std::string, std::string> querys;
+        while ((v = strtok_r(qstr, "&", &qstr)) != 0) {
+            char *k = strtok_r(v, "=", &v);
+            querys[k] = v;
         }
+
+        for (int i = 0; i < 5; ++i) {
+            std::string is = std::to_string(i);
+            std::string hi = querys["h" + is], pi = querys["p" + is],
+                        fi = querys["f" + is];
+            if (hi.size() && pi.size() && fi.size()) {
+                output_connection(*http.get(), is, hi, pi);
+                execute(http, hi, pi, fi, is);
+            }
+        }
+    } catch (const std::exception& e) {
+        std::cerr << e.what() << "\n";
     }
 }
