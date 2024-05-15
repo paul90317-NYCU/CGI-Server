@@ -77,8 +77,9 @@ private:
             [this, self](boost::system::error_code ec, std::size_t /*length*/) {
                 if (ec)
                     return;
+                std::string full_uri = REQUEST_URI + "?" + QUERY_STRING;
                 setenv("REQUEST_METHOD", REQUEST_METHOD.c_str(), 1);
-                setenv("REQUEST_URI", REQUEST_URI.c_str(), 1);
+                setenv("REQUEST_URI", full_uri.c_str(), 1);
                 setenv("QUERY_STRING", QUERY_STRING.c_str(), 1);
                 setenv("SERVER_PROTOCOL", SERVER_PROTOCOL.c_str(), 1);
                 setenv("HTTP_HOST", HTTP_HOST.c_str(), 1);
