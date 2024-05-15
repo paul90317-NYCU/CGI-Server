@@ -8,6 +8,8 @@
 #include <utility>
 
 #include "console_run.hpp"
+#include "panel_run.hpp"
+
 
 using boost::asio::ip::tcp;
 
@@ -81,7 +83,10 @@ private:
             [this, self](boost::system::error_code ec, std::size_t /*length*/) {
                 if (ec)
                     return;
-                console_run(socket_, QUERY_STRING);
+                if(REQUEST_URI == "/console.cgi")
+                    console_run(socket_, QUERY_STRING);
+                else if(REQUEST_URI == "/panel.cgi")
+                    panel_run(socket_);
             });
     }
     

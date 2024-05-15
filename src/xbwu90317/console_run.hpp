@@ -35,7 +35,7 @@ void replace_all(std::string &line)
     boost::replace_all(line, "\n", "&NewLine;");
 }
 
-const char *body = R"MAIN(
+const char *console_body = R"CONSOLE(
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -85,7 +85,7 @@ const char *body = R"MAIN(
     </table>
   </body>
 </html>
-)MAIN";
+)CONSOLE";
 
 class golden_session : public std::enable_shared_from_this<golden_session>
 {
@@ -187,8 +187,8 @@ void console_run(std::shared_ptr<tcp::socket> http, std::string QUERY_STRING)
     // Print HTTP headers
     boost::asio::streambuf buf;
     std::ostream bout(&buf);
-    bout << "Content-Type: text/html\r\n\r\n";
-    bout << body;
+    bout << "Content-type: text/html\r\n\r\n";
+    bout << console_body;
     boost::asio::write(*http.get(), buf);
 
     // parse query

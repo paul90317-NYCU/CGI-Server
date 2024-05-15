@@ -15,7 +15,7 @@ http_server: http_server.cpp
 console.cgi: console.cpp
 	$(CXX) $< -o $@ $(CXX_INCLUDE_PARAMS) $(CXX_LIB_PARAMS) $(CXXFLAGS)
 
-cgi_server.exe: cgi_server.cpp console_run.hpp
+cgi_server.exe: cgi_server.cpp console_run.hpp panel_run.hpp
 	g++ $< -o $@ -lws2_32 -lwsock32 -std=c++14 -ID:\MinGW\include -g
 
 clean:
