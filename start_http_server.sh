@@ -31,8 +31,6 @@ else
   STUDENT_ID=$(ldapsearch -LLLx "uid=$USER" csid | tail -n 2 | head -n 1 | cut -d " " -f 2)
 fi
 
-USER_NAME=$3
-
 # Copy student's source code and utilities to the demo directory.
 cp -r "$NP_SCRIPT_DIR/src/$STUDENT_ID" "$DEMO_DIR/src"
 mkdir "$DEMO_DIR/working_dir" && cp -r "$NP_SCRIPT_DIR/working_dir/"* "$DEMO_DIR/working_dir"
@@ -45,7 +43,7 @@ mkdir -p "$HOME/public_html/npdemo3" && cp -r "$NP_SCRIPT_DIR/working_dir/"* "$H
 # Compile, and let the student's programs do it's work.
 if cd "$DEMO_DIR"; then
   INFO "Compiling..."
-  if (make -C "$DEMO_DIR/src"); then
+  if (make part1 -C "$DEMO_DIR/src"); then
     SUCCESS "Compilation completed!"
   else
     ERROR "Your project cannot be compiled by make"
@@ -71,12 +69,11 @@ if cd "$DEMO_DIR"; then
   echo "      http://$(hostname).cs.nycu.edu.tw:$HTTP_SERVER_PORT/welcome.cgi"
   echo ""
   INFO "Test console.cgi"
-  echo "      http://$(hostname).cs.nycu.edu.tw/~$USER_NAME/npdemo3/panel.cgi"
+  echo "      http://$(hostname).cs.nycu.edu.tw/~$(whoami)/npdemo3/panel.cgi"
   echo ""
   INFO "Test http_server and console.cgi (combined)"
   echo "      http://$(hostname).cs.nycu.edu.tw:$HTTP_SERVER_PORT/panel.cgi"
-  cd working_dir || exit 1
-  env -i ./http_server "$HTTP_SERVER_PORT"
+  ./start-container.sh -c "cd working_dir || exit 1; env -i ./http_server $HTTP_SERVER_PORT"
 
 else
   ERROR "Cannot change to the demo directory!"
